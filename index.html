@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistik Auswertung</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #fdfdfd;
+            --card-bg-color: #ffffff;
+            --text-color: #121212;
+            --text-color-light: #6c757d;
+            --primary-color: #4a4a4a;
+            --border-color: #f0f0f0;
+            --shadow-color: rgba(0, 0, 0, 0.04);
+            --shadow-hover-color: rgba(0, 0, 0, 0.08);
+            --rad-color: #007bff;
+            --nrad-color: #e8590c;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body.dark-mode {
+            --bg-color: #121212;
+            --card-bg-color: #1e1e1e;
+            --text-color: #e0e0e0;
+            --text-color-light: #8e8e8e;
+            --primary-color: #f0f0f0;
+            --border-color: #2c2c2c;
+            --shadow-color: rgba(0, 0, 0, 0.2);
+            --shadow-hover-color: rgba(0, 0, 0, 0.3);
+            --rad-color: #3498db;
+            --nrad-color: #f39c12;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 200;
+            letter-spacing: -1px;
+        }
+
+        .theme-switch {
+            display: inline-block;
+            height: 34px;
+            position: relative;
+            width: 60px;
+        }
+
+        .theme-switch input { display: none; }
+
+        .slider {
+            background-color: var(--card-bg-color);
+            border: 1px solid var(--border-color);
+            bottom: 0; cursor: pointer; left: 0; position: absolute; right: 0; top: 0;
+            transition: .4s; border-radius: 34px;
+        }
+
+        .slider:before {
+            background-color: var(--text-color-light);
+            bottom: 4px; content: ""; height: 24px; left: 4px; position: absolute;
+            transition: .4s; width: 24px; border-radius: 50%;
+        }
+
+        input:checked + .slider { background-color: var(--primary-color); border-color: var(--primary-color); }
+        input:checked + .slider:before { background-color: var(--card-bg-color); transform: translateX(26px); }
+
+        #drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 4rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: transparent;
+        }
+
+        #drop-zone.dragover {
+            border-color: var(--primary-color);
+            background-color: var(--card-bg-color);
+        }
+
+        #drop-zone h2 { font-weight: 400; font-size: 1.5rem; margin-bottom: 0.5rem; }
+        #drop-zone p { color: var(--text-color-light); }
+
+        .stats-section {
+            padding: 2.5rem 0;
+        }
+        
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 300;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .stat-card {
+            background-color: var(--card-bg-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 15px var(--shadow-color);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px var(--shadow-hover-color);
+        }
+
+        .stat-card-title {
+            font-weight: 500;
+            font-size: 1rem;
+            color: var(--text-color-light);
+            margin-bottom: 1rem;
+        }
+
+        .stat-card-title .clinic-rad { color: var(--rad-color); font-weight: 600; }
+        .stat-card-title .clinic-nrad { color: var(--nrad-color); font-weight: 600; }
+
+        .main-value {
+            font-size: 3.5rem;
+            font-weight: 200;
+            line-height: 1;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem 1rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        .details-grid div {
+            display: flex;
+            justify-content: space-between;
+        }
+        .details-grid span:first-child { color: var(--text-color-light); }
+        .details-grid span:last-child { font-weight: 600; }
+
+        .person-card {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            background-color: var(--card-bg-color);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 15px var(--shadow-color);
+        }
+        .person-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px var(--shadow-hover-color);
+        }
+
+        .person-rank {
+            font-size: 1.5rem;
+            font-weight: 300;
+            color: var(--text-color-light);
+            min-width: 30px;
+            text-align: center;
+        }
+        .person-details { flex-grow: 1; }
+        .person-name { font-weight: 600; font-size: 1.1rem; }
+        .person-stats-row {
+            display: flex; justify-content: space-between; align-items: baseline;
+            font-size: 0.95rem; color: var(--text-color-light);
+        }
+        .person-stats-row span {
+            font-weight: 600; color: var(--text-color);
+            font-size: 1rem; margin-left: 0.5rem;
+        }
+
+        .ranking-container {
+            display: grid; grid-template-columns: 1fr; gap: 2rem;
+        }
+        .ranking-column { display: flex; flex-direction: column; gap: 1rem; }
+        .ranking-column h4 { font-size: 1.2rem; font-weight: 400; color: var(--text-color-light); }
+
+        .export-buttons { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .btn {
+            background-color: var(--primary-color); color: var(--bg-color); border: none;
+            padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn:hover { opacity: 0.85; transform: translateY(-2px); }
+        .btn-secondary { background-color: var(--text-color-light); color: var(--bg-color); }
+
+        .hidden { display: none; }
+        .invisible { opacity: 0; }
+
+        @media (min-width: 1200px) {
+            .ranking-container { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (min-width: 768px) {
+            .stats-grid-performance { grid-template-columns: repeat(4, 1fr); }
+            .stats-grid-collaboration { grid-template-columns: repeat(4, 1fr); }
+        }
+        @media (max-width: 767px) {
+             .stats-grid-performance, .stats-grid-collaboration { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Analyse-Dashboard</h1>
+            <label class="theme-switch">
+                <input type="checkbox" id="theme-toggle" />
+                <span class="slider"></span>
+            </label>
+        </header>
+
+        <main>
+            <div id="drop-zone">
+                <h2>CSV-Datei hierher ziehen</h2>
+                <p>oder klicken, um eine Datei auszuwählen</p>
+                <input type="file" id="file-input" accept=".csv" class="hidden">
+            </div>
+
+            <div id="results-container" class="hidden">
+                <section id="klinik-performance" class="stats-section invisible">
+                    <h3 class="section-title">Klinik-Performance</h3>
+                    <div class="stats-grid stats-grid-performance">
+                        <div class="stat-card">
+                            <div class="stat-card-title">Befundet <span class="clinic-rad">RAD</span></div>
+                            <div class="main-value" id="val-befund-rad-total">0</div>
+                            <div class="details-grid">
+                                <div><span>CT</span><span id="val-befund-rad-ct">0</span></div>
+                                <div><span>MR</span><span id="val-befund-rad-mr">0</span></div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-title">Freigegeben <span class="clinic-rad">RAD</span></div>
+                            <div class="main-value" id="val-freig-rad-total">0</div>
+                            <div class="details-grid">
+                                <div><span>CT</span><span id="val-freig-rad-ct">0</span></div>
+                                <div><span>MR</span><span id="val-freig-rad-mr">0</span></div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-title">Befundet <span class="clinic-nrad">NRAD</span></div>
+                            <div class="main-value" id="val-befund-nrad-total">0</div>
+                            <div class="details-grid">
+                                <div><span>CT</span><span id="val-befund-nrad-ct">0</span></div>
+                                <div><span>MR</span><span id="val-befund-nrad-mr">0</span></div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-title">Freigegeben <span class="clinic-nrad">NRAD</span></div>
+                            <div class="main-value" id="val-freig-nrad-total">0</div>
+                            <div class="details-grid">
+                                <div><span>CT</span><span id="val-freig-nrad-ct">0</span></div>
+                                <div><span>MR</span><span id="val-freig-nrad-mr">0</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <section id="kollaborations-matrix" class="stats-section invisible">
+                    <h3 class="section-title">Kollaborations-Matrix (Verfasser / Freigeber)</h3>
+                    <div class="stats-grid stats-grid-collaboration">
+                       <div class="stat-card">
+                            <div class="stat-card-title"><span class="clinic-rad">RAD</span> / <span class="clinic-rad">RAD</span></div>
+                            <div class="main-value" id="val-combo-rad-rad-total">0</div>
+                             <div class="details-grid">
+                                <div><span>CT</span><span id="val-combo-rad-rad-ct">0</span></div>
+                                <div><span>MR</span><span id="val-combo-rad-rad-mr">0</span></div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-title"><span class="clinic-nrad">NRAD</span> / <span class="clinic-nrad">NRAD</span></div>
+                            <div class="main-value" id="val-combo-nrad-nrad-total">0</div>
+                            <div class="details-grid">
+                                <div><span>CT</span><span id="val-combo-nrad-nrad-ct">0</span></div>
+                                <div><span>MR</span><span id="val-combo-nrad-nrad-mr">0</span></div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-title"><span class="clinic-rad">RAD</span> / <span class="clinic-nrad">NRAD</span></div>
+                            <div class="main-value" id="val-combo-rad-nrad-total">0</div>
+                            <div class="details-grid">
+                                <div><span>CT</span><span id="val-combo-rad-nrad-ct">0</span></div>
+                                <div><span>MR</span><span id="val-combo-rad-nrad-mr">0</span></div>
+                            </div>
+                        </div>
+                         <div class="stat-card">
+                            <div class="stat-card-title"><span class="clinic-nrad">NRAD</span> / <span class="clinic-rad">RAD</span></div>
+                            <div class="main-value" id="val-combo-nrad-rad-total">0</div>
+                            <div class="details-grid">
+                                <div><span>CT</span><span id="val-combo-nrad-rad-ct">0</span></div>
+                                <div><span>MR</span><span id="val-combo-nrad-rad-mr">0</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="person-ranking" class="stats-section invisible">
+                    <h3 class="section-title">Personen-Ranking</h3>
+                    <div class="ranking-container">
+                        <div class="ranking-column">
+                            <h4>Nach Anzahl Befunde</h4>
+                            <div id="ranking-befundet-grid" class="ranking-column"></div>
+                        </div>
+                        <div class="ranking-column">
+                            <h4>Nach Anzahl Freigaben</h4>
+                            <div id="ranking-freigegeben-grid" class="ranking-column"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="export-section" class="stats-section invisible">
+                    <h3 class="section-title">Export</h3>
+                    <div class="export-buttons">
+                        <button id="export-main-txt" class="btn">Hauptstatistik (TXT)</button>
+                        <button id="export-all-txt" class="btn btn-secondary">Alle Statistiken (TXT)</button>
+                        <button id="export-all-md" class="btn btn-secondary">Alle Statistiken (MD)</button>
+                        <button id="export-all-csv" class="btn btn-secondary">Alle Statistiken (CSV)</button>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const clinicMapping = {
+                'NRAD': ['MSCHUENGEL', 'NBAILIS', 'JEMAYBAUM'],
+                'RAD': ['ASCHAEFER P.', 'Alexander/ Polednia', 'Bettina/ Dalitz', 'FPLACZEK', 'JUBECKER', 'MLURZ', 'THALER/ Anna', 'CSTOECKEL', 'MZILL', 'MTORKI', 'AEL', 'JLICENJI', 'RSEBASTIAN', 'AMARTIN'],
+                'NUK': ['TKLUGE', 'ENICKEL D.', 'RKLUGE'],
+                'KAIST': ['Anja/ Fabian D.', 'Saskia/ Schenk D.']
+            };
+            
+            const nameMapping = {
+                'MSCHUENGEL': 'M. Schüngel', 'NBAILIS': 'N. Bailis', 'JEMAYBAUM': 'J. Maybaum',
+                'ASCHAEFER P.': 'A.-O. Schäfer', 'Alexander/ Polednia': 'A. Polednia', 'Bettina/ Dalitz': 'B. Dalitz',
+                'FPLACZEK': 'F. Placzek', 'JUBECKER': 'J. Becker', 'MLURZ': 'M. Lurz', 'THALER/ Anna': 'A. Thaler',
+                'CSTOECKEL': 'C. Stöckel', 'MZILL': 'M. Zill', 'MTORKI': 'M. Torki', 'AEL': 'A. El Houba',
+                'JLICENJI': 'J. Licenji', 'RSEBASTIAN': 'R. Sebastian', 'AMARTIN': 'A. Martin'
+            };
+
+            const excludedClinics = ['NUK', 'KAIST'];
+            let currentStats = null;
+            let currentFilename = '';
+
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
+            const resultsContainer = document.getElementById('results-container');
+            const themeToggle = document.getElementById('theme-toggle');
+
+            const getClinic = (name) => {
+                for (const clinic in clinicMapping) {
+                    if (clinicMapping[clinic].includes(name)) return clinic;
+                }
+                return null;
+            };
+
+            const parseCSV = (text) => {
+                const lines = text.trim().split('\n');
+                if (lines.length < 2) return [];
+
+                const headerLine = lines.shift().trim().replace(/^\uFEFF/, '');
+                const header = headerLine.split(',');
+                
+                const befundIndex = header.indexOf('Berfundverfasser');
+                const freigebIndex = header.indexOf('Freigebender');
+                const modalitaetIndex = header.indexOf('Modalität');
+
+                if (befundIndex === -1 || freigebIndex === -1 || modalitaetIndex === -1) {
+                    alert('Fehler: Die CSV-Datei hat ein ungültiges Format. Die Spalten "Berfundverfasser", "Freigebender" und "Modalität" müssen vorhanden sein.');
+                    return null;
+                }
+
+                return lines.map(line => {
+                    const values = line.trim().split(',');
+                    return {
+                        befundverfasser: values[befundIndex],
+                        freigebender: values[freigebIndex],
+                        modalitaet: values[modalitaetIndex]
+                    };
+                }).filter(row => row.befundverfasser && row.freigebender && row.modalitaet);
+            };
+
+            const processData = (data) => {
+                const stats = {
+                    freigebender: { RAD: { total: 0, CT: 0, MR: 0 }, NRAD: { total: 0, CT: 0, MR: 0 } },
+                    befundverfasser: { RAD: { total: 0, CT: 0, MR: 0 }, NRAD: { total: 0, CT: 0, MR: 0 } },
+                    kombinationen: {
+                        'RAD/RAD': { total: 0, CT: 0, MR: 0 }, 'NRAD/NRAD': { total: 0, CT: 0, MR: 0 },
+                        'RAD/NRAD': { total: 0, CT: 0, MR: 0 }, 'NRAD/RAD': { total: 0, CT: 0, MR: 0 }
+                    },
+                    personen: { befundverfasser: {}, freigebender: {} }
+                };
+
+                data.forEach(row => {
+                    const befundClinic = getClinic(row.befundverfasser);
+                    const freigebClinic = getClinic(row.freigebender);
+                    if (excludedClinics.includes(befundClinic) || excludedClinics.includes(freigebClinic) || !befundClinic || !freigebClinic) return;
+
+                    let modalitaet = null;
+                    if (row.modalitaet.includes('CT')) modalitaet = 'CT';
+                    else if (row.modalitaet.includes('MR')) modalitaet = 'MR';
+                    if (!modalitaet) return;
+
+                    stats.freigebender[freigebClinic].total++;
+                    stats.freigebender[freigebClinic][modalitaet]++;
+                    stats.befundverfasser[befundClinic].total++;
+                    stats.befundverfasser[befundClinic][modalitaet]++;
+
+                    const comboKey = `${befundClinic}/${freigebClinic}`;
+                    if (stats.kombinationen[comboKey]) {
+                        stats.kombinationen[comboKey].total++;
+                        stats.kombinationen[comboKey][modalitaet]++;
+                    }
+
+                    if (!stats.personen.befundverfasser[row.befundverfasser]) stats.personen.befundverfasser[row.befundverfasser] = { total: 0, CT: 0, MR: 0 };
+                    stats.personen.befundverfasser[row.befundverfasser].total++;
+                    stats.personen.befundverfasser[row.befundverfasser][modalitaet]++;
+                    
+                    if (!stats.personen.freigebender[row.freigebender]) stats.personen.freigebender[row.freigebender] = { total: 0, CT: 0, MR: 0 };
+                    stats.personen.freigebender[row.freigebender].total++;
+                    stats.personen.freigebender[row.freigebender][modalitaet]++;
+                });
+                return stats;
+            };
+
+            const animateValue = (id, endValue) => {
+                const element = document.getElementById(id);
+                if (element) anime({ targets: element, innerHTML: [0, endValue], round: 1, easing: 'easeOutExpo', duration: 1500 });
+            };
+
+            const renderResults = (stats) => {
+                currentStats = stats;
+                
+                animateValue('val-freig-rad-total', stats.freigebender.RAD.total);
+                animateValue('val-freig-rad-ct', stats.freigebender.RAD.CT);
+                animateValue('val-freig-rad-mr', stats.freigebender.RAD.MR);
+                animateValue('val-freig-nrad-total', stats.freigebender.NRAD.total);
+                animateValue('val-freig-nrad-ct', stats.freigebender.NRAD.CT);
+                animateValue('val-freig-nrad-mr', stats.freigebender.NRAD.MR);
+                animateValue('val-befund-rad-total', stats.befundverfasser.RAD.total);
+                animateValue('val-befund-rad-ct', stats.befundverfasser.RAD.CT);
+                animateValue('val-befund-rad-mr', stats.befundverfasser.RAD.MR);
+                animateValue('val-befund-nrad-total', stats.befundverfasser.NRAD.total);
+                animateValue('val-befund-nrad-ct', stats.befundverfasser.NRAD.CT);
+                animateValue('val-befund-nrad-mr', stats.befundverfasser.NRAD.MR);
+
+                Object.keys(stats.kombinationen).forEach(key => {
+                    const cleanKey = key.toLowerCase().replace('/', '-');
+                    animateValue(`val-combo-${cleanKey}-total`, stats.kombinationen[key].total);
+                    animateValue(`val-combo-${cleanKey}-ct`, stats.kombinationen[key].CT);
+                    animateValue(`val-combo-${cleanKey}-mr`, stats.kombinationen[key].MR);
+                });
+                
+                renderPersonStats(stats.personen);
+
+                if (resultsContainer.classList.contains('hidden')) {
+                    resultsContainer.classList.remove('hidden');
+                    anime({
+                        targets: '#results-container section',
+                        opacity: [0, 1],
+                        translateY: [20, 0],
+                        duration: 800,
+                        delay: anime.stagger(100, { easing: 'easeOutCubic' })
+                    });
+                }
+            };
+            
+            const renderPersonStats = (personData) => {
+                const befundetContainer = document.getElementById('ranking-befundet-grid');
+                const freigegebenContainer = document.getElementById('ranking-freigegeben-grid');
+                befundetContainer.innerHTML = '';
+                freigegebenContainer.innerHTML = '';
+
+                const createPersonCard = (person, rank, type) => {
+                    const data = type === 'befundet' ? person.befund : person.freigabe;
+                    const card = document.createElement('div');
+                    card.className = 'person-card';
+                    card.innerHTML = `
+                        <div class="person-rank">${rank}</div>
+                        <div class="person-details">
+                            <div class="person-name">${person.fullName}</div>
+                            <div class="person-stats-row">
+                                <div>Gesamt: <span>${data.total}</span></div>
+                                <div><small>CT:</small> <span>${data.CT}</span> <small>MR:</small> <span>${data.MR}</span></div>
+                            </div>
+                        </div>
+                    `;
+                    return card;
+                };
+
+                const allPersonKeys = [...new Set([...Object.keys(personData.befundverfasser), ...Object.keys(personData.freigebender)])];
+                const enrichedPersons = allPersonKeys.map(key => ({
+                    key,
+                    fullName: nameMapping[key] || key,
+                    befund: personData.befundverfasser[key] || { total: 0, CT: 0, MR: 0 },
+                    freigabe: personData.freigebender[key] || { total: 0, CT: 0, MR: 0 }
+                }));
+
+                const befundetRanking = [...enrichedPersons].sort((a, b) => b.befund.total - a.befund.total);
+                const freigegebenRanking = [...enrichedPersons].sort((a, b) => b.freigabe.total - a.freigabe.total);
+
+                befundetRanking.forEach((p, i) => befundetContainer.appendChild(createPersonCard(p, i + 1, 'befundet')));
+                freigegebenRanking.forEach((p, i) => freigegebenContainer.appendChild(createPersonCard(p, i + 1, 'freigegeben')));
+            };
+
+            const handleFile = (file) => {
+                if (file && (file.type === 'text/csv' || file.name.endsWith('.csv'))) {
+                    currentFilename = file.name.replace('.csv', '');
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const data = parseCSV(e.target.result);
+                        if (data === null) return; 
+                        const stats = processData(data);
+                        renderResults(stats);
+                    };
+                    reader.readAsText(file, 'UTF-8');
+                } else {
+                    alert('Bitte eine gültige CSV-Datei auswählen.');
+                }
+            };
+
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+            dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFile(e.dataTransfer.files[0]); });
+            dropZone.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+            themeToggle.addEventListener('change', () => { document.body.classList.toggle('dark-mode'); });
+
+            const generateExportContent = (stats, format, mainOnly = false) => {
+                let content = '';
+                const title = currentFilename || 'Statistik';
+                
+                const mainStatsContent = {
+                    txt: `${title.toUpperCase()}\n==============\n\nKLINIK-PERFORMANCE\n------------------\nBefundet RAD: Total=${stats.befundverfasser.RAD.total}, CT=${stats.befundverfasser.RAD.CT}, MR=${stats.befundverfasser.RAD.MR}\nFreigegeben RAD: Total=${stats.freigebender.RAD.total}, CT=${stats.freigebender.RAD.CT}, MR=${stats.freigebender.RAD.MR}\nBefundet NRAD: Total=${stats.befundverfasser.NRAD.total}, CT=${stats.befundverfasser.NRAD.CT}, MR=${stats.befundverfasser.NRAD.MR}\nFreigegeben NRAD: Total=${stats.freigebender.NRAD.total}, CT=${stats.freigebender.NRAD.CT}, MR=${stats.freigebender.NRAD.MR}\n\nKOLLABORATIONS-MATRIX (Verf./Freig.)\n-------------------------------------\nRAD/RAD: Total=${stats.kombinationen['RAD/RAD'].total}, CT=${stats.kombinationen['RAD/RAD'].CT}, MR=${stats.kombinationen['RAD/RAD'].MR}\nNRAD/NRAD: Total=${stats.kombinationen['NRAD/NRAD'].total}, CT=${stats.kombinationen['NRAD/NRAD'].CT}, MR=${stats.kombinationen['NRAD/NRAD'].MR}\nRAD/NRAD: Total=${stats.kombinationen['RAD/NRAD'].total}, CT=${stats.kombinationen['RAD/NRAD'].CT}, MR=${stats.kombinationen['RAD/NRAD'].MR}\nNRAD/RAD: Total=${stats.kombinationen['NRAD/RAD'].total}, CT=${stats.kombinationen['NRAD/RAD'].CT}, MR=${stats.kombinationen['NRAD/RAD'].MR}\n`,
+                    md: `# ${title}\n\n## Klinik-Performance\n- **Befundet RAD**: Total: ${stats.befundverfasser.RAD.total}, CT: ${stats.befundverfasser.RAD.CT}, MR: ${stats.befundverfasser.RAD.MR}\n- **Freigegeben RAD**: Total: ${stats.freigebender.RAD.total}, CT: ${stats.freigebender.RAD.CT}, MR: ${stats.freigebender.RAD.MR}\n- **Befundet NRAD**: Total: ${stats.befundverfasser.NRAD.total}, CT: ${stats.befundverfasser.NRAD.CT}, MR: ${stats.befundverfasser.NRAD.MR}\n- **Freigegeben NRAD**: Total: ${stats.freigebender.NRAD.total}, CT: ${stats.freigebender.NRAD.CT}, MR: ${stats.freigebender.NRAD.MR}\n\n## Kollaborations-Matrix (Verf./Freig.)\n- **RAD/RAD**: Total: ${stats.kombinationen['RAD/RAD'].total}, CT: ${stats.kombinationen['RAD/RAD'].CT}, MR: ${stats.kombinationen['RAD/RAD'].MR}\n- **NRAD/NRAD**: Total: ${stats.kombinationen['NRAD/NRAD'].total}, CT: ${stats.kombinationen['NRAD/NRAD'].CT}, MR: ${stats.kombinationen['NRAD/NRAD'].MR}\n- **RAD/NRAD**: Total: ${stats.kombinationen['RAD/NRAD'].total}, CT: ${stats.kombinationen['RAD/NRAD'].CT}, MR: ${stats.kombinationen['RAD/NRAD'].MR}\n- **NRAD/RAD**: Total: ${stats.kombinationen['NRAD/RAD'].total}, CT: ${stats.kombinationen['NRAD/RAD'].CT}, MR: ${stats.kombinationen['NRAD/RAD'].MR}\n`,
+                    csv: `Kategorie,Gruppe,Total,CT,MR\nBefundet,RAD,${stats.befundverfasser.RAD.total},${stats.befundverfasser.RAD.CT},${stats.befundverfasser.RAD.MR}\nFreigegeben,RAD,${stats.freigebender.RAD.total},${stats.freigebender.RAD.CT},${stats.freigebender.RAD.MR}\nBefundet,NRAD,${stats.befundverfasser.NRAD.total},${stats.befundverfasser.NRAD.CT},${stats.befundverfasser.NRAD.MR}\nFreigegeben,NRAD,${stats.freigebender.NRAD.total},${stats.freigebender.NRAD.CT},${stats.freigebender.NRAD.MR}\nKombination,RAD/RAD,${stats.kombinationen['RAD/RAD'].total},${stats.kombinationen['RAD/RAD'].CT},${stats.kombinationen['RAD/RAD'].MR}\nKombination,NRAD/NRAD,${stats.kombinationen['NRAD/NRAD'].total},${stats.kombinationen['NRAD/NRAD'].CT},${stats.kombinationen['NRAD/NRAD'].MR}\nKombination,RAD/NRAD,${stats.kombinationen['RAD/NRAD'].total},${stats.kombinationen['RAD/NRAD'].CT},${stats.kombinationen['RAD/NRAD'].MR}\nKombination,NRAD/RAD,${stats.kombinationen['NRAD/RAD'].total},${stats.kombinationen['NRAD/RAD'].CT},${stats.kombinationen['NRAD/RAD'].MR}\n`
+                };
+                content += mainStatsContent[format];
+                if (mainOnly) return content;
+
+                const allPersonKeys = [...new Set([...Object.keys(stats.personen.befundverfasser), ...Object.keys(stats.personen.freigebender)])];
+                const enrichedPersons = allPersonKeys.map(key => ({
+                    key, fullName: nameMapping[key] || key,
+                    befund: stats.personen.befundverfasser[key] || { total: 0, CT: 0, MR: 0 },
+                    freigabe: stats.personen.freigebender[key] || { total: 0, CT: 0, MR: 0 }
+                }));
+
+                const befundetRanking = [...enrichedPersons].sort((a, b) => b.befund.total - a.befund.total);
+                const freigegebenRanking = [...enrichedPersons].sort((a, b) => b.freigabe.total - a.freigabe.total);
+
+                if(format === 'txt') {
+                    content += '\n\nRANKING NACH BEFUNDEN\n======================\n';
+                    befundetRanking.forEach((p, i) => { content += `${i + 1}. ${p.fullName} - Total: ${p.befund.total} (CT: ${p.befund.CT}, MR: ${p.befund.MR})\n`; });
+                    content += '\n\nRANKING NACH FREIGABEN\n=======================\n';
+                    freigegebenRanking.forEach((p, i) => { content += `${i + 1}. ${p.fullName} - Total: ${p.freigabe.total} (CT: ${p.freigabe.CT}, MR: ${p.freigabe.MR})\n`; });
+                }
+                if(format === 'md') {
+                    content += '\n\n## Ranking nach Befunden\n\n| Rang | Name | Total | CT | MR |\n|---|---|---|---|---|\n';
+                    befundetRanking.forEach((p, i) => { content += `| ${i + 1} | ${p.fullName} | ${p.befund.total} | ${p.befund.CT} | ${p.befund.MR} |\n`; });
+                    content += '\n\n## Ranking nach Freigaben\n\n| Rang | Name | Total | CT | MR |\n|---|---|---|---|---|\n';
+                    freigegebenRanking.forEach((p, i) => { content += `| ${i + 1} | ${p.fullName} | ${p.freigabe.total} | ${p.freigabe.CT} | ${p.freigabe.MR} |\n`; });
+                }
+                if(format === 'csv') {
+                    content += `\nRanking,Typ,Name,Total,CT,MR\n`;
+                    befundetRanking.forEach((p, i) => { content += `${i + 1},Befundet,${p.fullName},${p.befund.total},${p.befund.CT},${p.befund.MR}\n`; });
+                    freigegebenRanking.forEach((p, i) => { content += `${i + 1},Freigegeben,${p.fullName},${p.freigabe.total},${p.freigabe.CT},${p.freigabe.MR}\n`; });
+                }
+                return content;
+            };
+            
+            const exportData = (format, mainOnly = false) => {
+                if (!currentStats) { alert('Bitte zuerst eine Datei analysieren.'); return; }
+                const content = generateExportContent(currentStats, format, mainOnly);
+                const blob = new Blob([content], { type: `text/${format};charset=utf-8` });
+                const filename = `${currentFilename}-statistik-${mainOnly ? 'main' : 'all'}.${format}`;
+                saveAs(blob, filename);
+            };
+
+            document.getElementById('export-main-txt').addEventListener('click', () => exportData('txt', true));
+            document.getElementById('export-all-txt').addEventListener('click', () => exportData('txt'));
+            document.getElementById('export-all-md').addEventListener('click', () => exportData('md'));
+            document.getElementById('export-all-csv').addEventListener('click', () => exportData('csv'));
+
+        });
+    </script>
+</body>
+</html>
